@@ -2,6 +2,7 @@ import platform
 import sys
 from pathlib import Path
 
+
 def get_os() -> str:
     if sys.platform.startswith("win"):
         return "windows"
@@ -11,6 +12,7 @@ def get_os() -> str:
         return "linux"
     raise RuntimeError(f"Unsupported OS: {sys.platform}")
 
+
 def get_arch() -> str:
     machine = platform.machine().lower()
     if machine in ("amd64", "x86_64", "x64"):
@@ -19,13 +21,15 @@ def get_arch() -> str:
         return "arm64"
     raise RuntimeError(f"Unsupported architecture: {machine}")
 
+
 def get_base_dir() -> Path:
     return Path.home() / ".istioswitch"
+
 
 def get_asset_name(version: str) -> str:
     os_name = get_os()
     arch = get_arch()
-    
+
     if os_name == "windows":
         return f"istio-{version}-win.zip"
     elif os_name == "macos":
