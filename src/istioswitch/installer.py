@@ -22,11 +22,11 @@ def _get_http_client() -> httpx.Client:
     no_proxy = os.environ.get("NO_PROXY") or os.environ.get("no_proxy")
 
     client_args = {}
-    
+
     if proxy:
         client_args["proxy"] = proxy
         client_args["verify"] = False
-        
+
         if no_proxy:
             # For httpx >= 0.24.0 we use mounts to bypass proxies
             mounts = {}
