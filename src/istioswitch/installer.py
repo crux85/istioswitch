@@ -2,12 +2,42 @@ import hashlib
 import shutil
 import tarfile
 import zipfile
+import os
 from pathlib import Path
 from typing import List
 import httpx
 from rich.progress import Progress
 
 from istioswitch.platform_utils import get_base_dir, get_asset_name, get_os
+
+
+def _get_http_client() -> httpx.Client:
+    """Returns an httpx.Client configured with system proxies if available."""
+    proxy = (
+        os.environ.get("HTTP_PROXY")
+        or os.environ.get("http_proxy")
+        or os.environ.get("HTTPS_PROXY")
+        or os.environ.get("https_proxy")
+    )
+    no_proxy = os.environ.get("NO_PROXY") or os.environ.get("no_proxy")
+
+    client_args = {}
+    
+    if proxy:
+        client_args["proxy"] = proxy
+        client_args["verify"] = False
+        
+        if no_proxy:
+            # For httpx >= 0.24.0 we use mounts to bypass proxies
+            mounts = {}
+            for domain in no_proxy.split(","):
+                domain = domain.strip()
+                if domain:
+                    mounts[f"all://*{domain}"] = None
+            if mounts:
+                client_args["mounts"] = mounts
+
+    return httpx.Client(**client_args)
 
 
 def get_versions_dir() -> Path:
@@ -22,8 +52,9 @@ def is_installed(version: str) -> bool:
 def get_available_versions(limit: int = 20) -> List[str]:
     url = "https://api.github.com/repos/istio/istio/releases"
     try:
-        response = httpx.get(url, params={"per_page": 50}, timeout=10)
-        response.raise_for_status()
+        with _get_http_client() as client:
+            response = client.get(url, params={"per_page": 50}, timeout=10)
+            response.raise_for_status()
     except httpx.RequestError as e:
         raise RuntimeError(f"Network error fetching releases: {e}")
 
@@ -49,17 +80,20 @@ def verify_checksum(file_path: Path, expected_hash: str) -> bool:
 
 def download_file(url: str, dest: Path) -> None:
     try:
-        with httpx.stream("GET", url, follow_redirects=True, timeout=30) as response:
-            if response.status_code == 404:
-                raise ValueError("Asset not found on GitHub")
-            response.raise_for_status()
-            total_size = int(response.headers.get("Content-Length", 0))
-            with Progress() as progress:
-                task = progress.add_task("Downloading...", total=total_size)
-                with open(dest, "wb") as f:
-                    for chunk in response.iter_bytes(chunk_size=8192):
-                        f.write(chunk)
-                        progress.update(task, advance=len(chunk))
+        with _get_http_client() as client:
+            with client.stream(
+                "GET", url, follow_redirects=True, timeout=30
+            ) as response:
+                if response.status_code == 404:
+                    raise ValueError("Asset not found on GitHub")
+                response.raise_for_status()
+                total_size = int(response.headers.get("Content-Length", 0))
+                with Progress() as progress:
+                    task = progress.add_task("Downloading...", total=total_size)
+                    with open(dest, "wb") as f:
+                        for chunk in response.iter_bytes(chunk_size=8192):
+                            f.write(chunk)
+                            progress.update(task, advance=len(chunk))
     except httpx.RequestError as e:
         if dest.exists():
             dest.unlink()
@@ -69,13 +103,14 @@ def download_file(url: str, dest: Path) -> None:
 def fetch_expected_checksum(version: str, asset_name: str) -> str:
     url = f"https://github.com/istio/istio/releases/download/{version}/{asset_name}.sha256"
     try:
-        response = httpx.get(url, follow_redirects=True, timeout=10)
-        if response.status_code == 404:
-            raise ValueError("Checksum file not found")
-        response.raise_for_status()
-        content = response.text.strip()
-        # Usually formatted as "HASH  filename"
-        return content.split()[0]
+        with _get_http_client() as client:
+            response = client.get(url, follow_redirects=True, timeout=10)
+            if response.status_code == 404:
+                raise ValueError("Checksum file not found")
+            response.raise_for_status()
+            content = response.text.strip()
+            # Usually formatted as "HASH  filename"
+            return content.split()[0]
     except httpx.RequestError as e:
         raise RuntimeError(f"Failed to fetch checksum: {e}")
 

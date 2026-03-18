@@ -15,7 +15,7 @@ def test_get_available_versions(monkeypatch):
         {"tag_name": "1.2.4-rc1", "prerelease": True, "draft": False},
         {"tag_name": "1.2.2", "prerelease": False, "draft": False},
     ]
-    monkeypatch.setattr("httpx.get", mock_get)
+    monkeypatch.setattr("httpx.Client.get", mock_get)
 
     versions = installer.get_available_versions()
     assert versions == ["1.2.3", "1.2.2"]
@@ -26,7 +26,7 @@ def test_get_available_versions_limit(monkeypatch):
     mock_get.return_value.json.return_value = [
         {"tag_name": f"1.{i}", "prerelease": False, "draft": False} for i in range(5)
     ]
-    monkeypatch.setattr("httpx.get", mock_get)
+    monkeypatch.setattr("httpx.Client.get", mock_get)
 
     versions = installer.get_available_versions(limit=2)
     assert versions == ["1.0", "1.1"]
@@ -36,7 +36,7 @@ def test_get_available_versions_network_error(monkeypatch):
     def mock_get(*args, **kwargs):
         raise httpx.RequestError("Network error")
 
-    monkeypatch.setattr("httpx.get", mock_get)
+    monkeypatch.setattr("httpx.Client.get", mock_get)
 
     with pytest.raises(RuntimeError, match="Network error"):
         installer.get_available_versions()
@@ -56,7 +56,7 @@ def test_fetch_expected_checksum(monkeypatch):
     mock_get = MagicMock()
     mock_get.return_value.status_code = 200
     mock_get.return_value.text = "abcdef123456  istioctl.exe"
-    monkeypatch.setattr("httpx.get", mock_get)
+    monkeypatch.setattr("httpx.Client.get", mock_get)
 
     assert installer.fetch_expected_checksum("1.0", "istio-1.0") == "abcdef123456"
 
@@ -64,7 +64,7 @@ def test_fetch_expected_checksum(monkeypatch):
 def test_fetch_expected_checksum_not_found(monkeypatch):
     mock_get = MagicMock()
     mock_get.return_value.status_code = 404
-    monkeypatch.setattr("httpx.get", mock_get)
+    monkeypatch.setattr("httpx.Client.get", mock_get)
 
     with pytest.raises(ValueError, match="Checksum file not found"):
         installer.fetch_expected_checksum("1.0", "istio-1.0")
@@ -74,7 +74,7 @@ def test_fetch_expected_checksum_network_error(monkeypatch):
     def mock_get(*args, **kwargs):
         raise httpx.RequestError("Error")
 
-    monkeypatch.setattr("httpx.get", mock_get)
+    monkeypatch.setattr("httpx.Client.get", mock_get)
 
     with pytest.raises(RuntimeError, match="Failed to fetch checksum"):
         installer.fetch_expected_checksum("1.0", "istio-1.0")
@@ -100,7 +100,7 @@ def test_download_file(monkeypatch, tmp_path):
             pass
 
     mock_stream = MagicMock(return_value=MockResponse())
-    monkeypatch.setattr("httpx.stream", mock_stream)
+    monkeypatch.setattr("httpx.Client.stream", mock_stream)
 
     dest = tmp_path / "dl.txt"
     installer.download_file("http://fake", dest)
@@ -119,7 +119,7 @@ def test_download_file_not_found(monkeypatch, tmp_path):
             pass
 
     mock_stream = MagicMock(return_value=MockResponse())
-    monkeypatch.setattr("httpx.stream", mock_stream)
+    monkeypatch.setattr("httpx.Client.stream", mock_stream)
 
     with pytest.raises(ValueError, match="Asset not found"):
         installer.download_file("http://fake", tmp_path / "dl.txt")
@@ -129,7 +129,7 @@ def test_download_file_error(monkeypatch, tmp_path):
     def mock_stream(*args, **kwargs):
         raise httpx.RequestError("Error")
 
-    monkeypatch.setattr("httpx.stream", mock_stream)
+    monkeypatch.setattr("httpx.Client.stream", mock_stream)
 
     dest = tmp_path / "dl.txt"
     dest.write_bytes(b"existing")
