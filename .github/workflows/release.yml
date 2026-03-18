@@ -53,7 +53,7 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      
+
       - name: Install dependencies
         run: |
           pip install -e .
@@ -61,17 +61,17 @@ jobs:
 
       - name: Build binary with PyInstaller
         run: pyinstaller --onefile --name istioswitch src/istioswitch/cli.py
-        
+
       - name: Rename artifact for release (Linux/macOS)
         if: runner.os != 'Windows'
         run: mv dist/istioswitch dist/${{ matrix.asset_name }}
-        
+
       - name: Rename artifact for release (Windows)
         if: runner.os == 'Windows'
         run: Rename-Item -Path dist\istioswitch.exe -NewName ${{ matrix.asset_name }}
-        
+
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.asset_name }}
           path: dist/${{ matrix.asset_name }}
@@ -82,15 +82,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4.1.9
         with:
           path: artifacts
-          
+
       - name: Display downloaded artifacts
         run: ls -la artifacts/*
-        
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
