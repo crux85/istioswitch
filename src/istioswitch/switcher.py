@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from typing import Tuple
 
 from istioswitch.platform_utils import get_base_dir, get_os

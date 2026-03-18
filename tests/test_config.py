@@ -1,4 +1,3 @@
-import pytest
 from istioswitch import config
 
 def test_read_write_config(mock_home):
