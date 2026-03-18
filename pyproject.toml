@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "istioswitch"
+version = "0.1.0"
+description = "CLI tool to switch between multiple versions of istioctl"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT License"}
+dependencies = [
+    "click>=8.0.0",
+    "httpx>=0.24.0",
+    "rich>=13.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.10",
+    "ruff>=0.1.0",
+    "black>=23.0",
+    "build>=1.0.0"
+]
+
+[project.scripts]
+istioswitch = "istioswitch.cli:cli"
+
+[tool.pytest.ini_options]
+addopts = "--cov=src/istioswitch --cov-report=term-missing --cov-report=html --cov-fail-under=80"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/istioswitch"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass"
+]
+
+[tool.ruff]
+line-length = 88
