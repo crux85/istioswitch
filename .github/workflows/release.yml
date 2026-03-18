@@ -5,9 +5,6 @@ on:
     tags:
       - "v*.*.*"
 
-
-
-
 permissions:
   contents: write
   id-token: write
@@ -16,12 +13,10 @@ jobs:
   test-and-pypi:
     name: Test and Publish to PyPI
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - name: Install dependencies
@@ -38,9 +33,7 @@ jobs:
   build-binaries:
     name: Build standalone binary for ${{ matrix.os }}
     needs: test-and-pypi
-    runs-on: \$\{\{ matrix.os \}\}
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
@@ -55,9 +48,9 @@ jobs:
             asset_name: istioswitch-windows-amd64.exe
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       
@@ -78,7 +71,7 @@ jobs:
         run: Rename-Item -Path dist\istioswitch.exe -NewName ${{ matrix.asset_name }}
         
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: ${{ matrix.asset_name }}
           path: dist/${{ matrix.asset_name }}
@@ -87,13 +80,11 @@ jobs:
     name: Create GitHub Release
     needs: build-binaries
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.9
         with:
           path: artifacts
           
