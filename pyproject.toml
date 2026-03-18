@@ -7,7 +7,7 @@ name = "istioswitch"
 version = "0.1.0"
 description = "CLI tool to switch between multiple versions of istioctl"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "MIT License"}
 dependencies = [
     "click>=8.0.0",
