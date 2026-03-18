@@ -5,8 +5,8 @@ on:
     tags:
       - "v*.*.*"
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+
 
 permissions:
   contents: write
@@ -16,6 +16,8 @@ jobs:
   test-and-pypi:
     name: Test and Publish to PyPI
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -36,7 +38,9 @@ jobs:
   build-binaries:
     name: Build standalone binary for ${{ matrix.os }}
     needs: test-and-pypi
-    runs-on: ${{ matrix.os }}
+    runs-on: \$\{\{ matrix.os \}\}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     strategy:
       matrix:
         include:
@@ -83,6 +87,8 @@ jobs:
     name: Create GitHub Release
     needs: build-binaries
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       
