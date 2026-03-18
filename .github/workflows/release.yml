@@ -5,17 +5,23 @@ on:
     tags:
       - "v*.*.*"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
-  build-and-publish:
+  test-and-pypi:
+    name: Test and Publish to PyPI
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.13"
       - name: Install dependencies
         run: |
           pip install -e ".[dev]"
@@ -24,5 +30,73 @@ jobs:
         run: pytest --cov=src/istioswitch --cov-fail-under=80
       - name: Build package
         run: python -m build
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      # - name: Publish to PyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+
+  build-binaries:
+    name: Build standalone binary for ${{ matrix.os }}
+    needs: test-and-pypi
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: istioswitch
+            asset_name: istioswitch-linux-amd64
+          - os: macos-latest
+            artifact_name: istioswitch
+            asset_name: istioswitch-darwin-amd64
+          - os: windows-latest
+            artifact_name: istioswitch.exe
+            asset_name: istioswitch-windows-amd64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Build binary with PyInstaller
+        run: pyinstaller --onefile --name istioswitch src/istioswitch/cli.py
+        
+      - name: Rename artifact for release (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: mv dist/istioswitch dist/${{ matrix.asset_name }}
+        
+      - name: Rename artifact for release (Windows)
+        if: runner.os == 'Windows'
+        run: Rename-Item -Path dist\istioswitch.exe -NewName ${{ matrix.asset_name }}
+        
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.asset_name }}
+
+  github-release:
+    name: Create GitHub Release
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          
+      - name: Display downloaded artifacts
+        run: ls -la artifacts/*
+        
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*/*
+          generate_release_notes: true
