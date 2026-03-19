@@ -7,10 +7,70 @@ from istioswitch.platform_utils import get_os
 console = Console()
 
 
-@click.group()
-def cli():
+def switch_to_version(version: str):
+    """Helper function to install and switch to a given version."""
+    try:
+        if not installer.is_installed(version):
+            console.print(
+                f"[cyan]Version {version} not found locally. Installing...[/cyan]"
+            )
+            installer.install_version(version)
+            console.print("[green]✓ Checksum verified.[/green]")
+            console.print(f"[green]✓ istioctl {version} installed.[/green]")
+
+        in_path, bin_dir = switcher.use_version(version)
+        console.print(f"[green]✓ Switched to istioctl {version}[/green]")
+        if not in_path:
+            console.print(
+                f"[yellow]Reminder:[/yellow] Please add {bin_dir} to your PATH."
+            )
+            if get_os() == "windows":
+                console.print(f'[cyan]setx PATH "%PATH%;{bin_dir}"[/cyan]')
+            else:
+                console.print(f'[cyan]export PATH="{bin_dir}:$PATH"[/cyan]')
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+
+
+def auto_switch():
+    """Detects version from cluster and switches to it."""
+    try:
+        context_name = detector.get_current_context()
+        ctx_str = (
+            f" on context {context_name}"
+            if context_name and context_name != "unknown-context"
+            else ""
+        )
+
+        with console.status(f"[cyan]Detecting Istio version{ctx_str}..."):
+            version = detector.detect_istio_version()
+
+        console.print(f"Detected Istio version{ctx_str}: {version}")
+        switch_to_version(version)
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+
+
+class IstioSwitchCLI(click.Group):
+    def get_command(self, ctx, cmd_name):
+        rv = click.Group.get_command(self, ctx, cmd_name)
+        if rv is not None:
+            return rv
+
+        # Fallback: Treat unknown command as a version string
+        @click.command(name=cmd_name)
+        def use_version_cmd():
+            switch_to_version(cmd_name)
+
+        return use_version_cmd
+
+
+@click.group(cls=IstioSwitchCLI, invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
     """istioswitch - Switch between multiple versions of istioctl"""
-    pass
+    if ctx.invoked_subcommand is None:
+        auto_switch()
 
 
 @cli.command()
@@ -39,7 +99,7 @@ def list():
 @cli.command()
 @click.argument("version")
 def install(version: str):
-    """Install a specific version of istioctl."""
+    """Install a specific version of istioctl without switching."""
     if installer.is_installed(version):
         console.print(f"[yellow]Version {version} is already installed.[/yellow]")
         return
@@ -53,28 +113,17 @@ def install(version: str):
 
 
 @cli.command()
-@click.argument("version")
-def use(version: str):
-    """Use a specific version of istioctl."""
+@click.option("--context", "-c", help="Target kubeconfig context")
+def detect(context: str):
+    """Show the istioctl version from Kubernetes cluster without switching."""
     try:
-        if not installer.is_installed(version):
-            console.print(
-                f"[cyan]Version {version} not found locally. Installing...[/cyan]"
-            )
-            installer.install_version(version)
-            console.print("[green]✓ Checksum verified.[/green]")
-            console.print(f"[green]✓ istioctl {version} installed.[/green]")
+        ctx_name = context if context else detector.get_current_context()
+        with console.status(f"[cyan]Detecting Istio version on context {ctx_name}..."):
+            version = detector.detect_istio_version(context)
 
-        in_path, bin_dir = switcher.use_version(version)
-        console.print(f"[green]✓ Switched to istioctl {version}[/green]")
-        if not in_path:
-            console.print(
-                f"[yellow]Reminder:[/yellow] Please add {bin_dir} to your PATH."
-            )
-            if get_os() == "windows":
-                console.print(f'[cyan]setx PATH "%PATH%;{bin_dir}"[/cyan]')
-            else:
-                console.print(f'[cyan]export PATH="{bin_dir}:$PATH"[/cyan]')
+        console.print(
+            f"Detected Istio version on {ctx_name}: [bold green]{version}[/bold green]"
+        )
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
 
@@ -87,29 +136,6 @@ def current():
         console.print(f"Active version: {active}")
     else:
         console.print("No active version set.")
-
-
-@cli.command()
-@click.option("--context", "-c", help="Target kubeconfig context")
-def detect(context: str):
-    """Detect istioctl version from Kubernetes cluster."""
-    try:
-        with console.status("[cyan]Detecting Istio version..."):
-            version = detector.detect_istio_version(context)
-
-        ctx_str = f" on context {context}" if context else ""
-        console.print(f"Detected Istio version{ctx_str}: {version}")
-
-        if installer.is_installed(version):
-            console.print(f"[green]✓ Version {version} already cached.[/green]")
-        else:
-            installer.install_version(version)
-            console.print(f"[green]✓ istioctl {version} installed.[/green]")
-
-        switcher.use_version(version)
-        console.print(f"[green]✓ Switched to istioctl {version}[/green]")
-    except Exception as e:
-        console.print(f"[red]Error:[/red] {e}")
 
 
 @cli.command()
