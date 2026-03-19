@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/crux85/istioswitch/compare/v0.2.0...v0.2.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* use symlink or copy instead of shims for active istioctl binary ([0016da7](https://github.com/crux85/istioswitch/commit/0016da738d903d97e2f1c0dc027be6725cf0f2e0))
+* use symlink or copy instead of shims for active istioctl binary ([ba0b4bd](https://github.com/crux85/istioswitch/commit/ba0b4bdceff1661574a3c5536d3d1325e7c2d3d2))
+
 ## [0.2.0](https://github.com/crux85/istioswitch/compare/v0.1.0...v0.2.0) (2026-03-19)
 
 
