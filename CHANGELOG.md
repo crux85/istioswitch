@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/crux85/istioswitch/compare/v0.1.0...v0.2.0) (2026-03-19)
+
+
+### Features
+
+* refactor CLI to tfswitch-like UX and improve istiod detection ([ec83703](https://github.com/crux85/istioswitch/commit/ec837035481579024c2e2498b5a0b80c247af4b9))
+* refactor CLI to tfswitch-like UX and improve istiod detection ([0909a9b](https://github.com/crux85/istioswitch/commit/0909a9b44d006ffe10854a18217bf221c5b07208))
+
 ## 0.1.0 (2026-03-18)
 
 
