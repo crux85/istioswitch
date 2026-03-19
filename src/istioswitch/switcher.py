@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import Tuple
 
 from istioswitch.platform_utils import get_base_dir, get_os
@@ -14,21 +15,29 @@ def use_version(version: str) -> Tuple[bool, str]:
     bin_dir.mkdir(parents=True, exist_ok=True)
     os_name = get_os()
 
-    target_bin = (
-        get_versions_dir()
-        / version
-        / ("istioctl.exe" if os_name == "windows" else "istioctl")
-    )
+    bin_name = "istioctl.exe" if os_name == "windows" else "istioctl"
+    target_bin = get_versions_dir() / version / bin_name
+    link_path = bin_dir / bin_name
 
-    if os_name == "windows":
-        bat_shim = bin_dir / "istioctl.bat"
-        bat_shim.write_text(f'@echo off\n"{target_bin}" %*')
-        ps1_shim = bin_dir / "istioctl.ps1"
-        ps1_shim.write_text(f'& "{target_bin}" @args')
-    else:
-        shim = bin_dir / "istioctl"
-        shim.write_text(f'#!/bin/sh\nexec "{target_bin}" "$@"')
-        shim.chmod(0o755)
+    # Clean up old links or shims
+    for old_file in [link_path, bin_dir / "istioctl.bat", bin_dir / "istioctl.ps1"]:
+        try:
+            if old_file.exists() or old_file.is_symlink():
+                old_file.unlink()
+        except OSError:
+            pass
+
+    # Try creating a symlink, fallback to copying if not permitted (e.g., Windows non-admin)
+    try:
+        os.symlink(target_bin, link_path)
+    except OSError:
+        shutil.copy2(target_bin, link_path)
+
+    if os_name != "windows":
+        try:
+            link_path.chmod(0o755)
+        except OSError:
+            pass
 
     set_active_version(version)
 

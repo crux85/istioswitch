@@ -9,7 +9,8 @@ def test_use_version_linux(mock_home, mock_os_arch, monkeypatch):
     # fake installation
     ver_dir = mock_home / ".istioswitch" / "versions" / "1.0"
     ver_dir.mkdir(parents=True, exist_ok=True)
-    (ver_dir / "istioctl").touch()
+    target_bin = ver_dir / "istioctl"
+    target_bin.touch()
 
     monkeypatch.setattr(os, "environ", {"PATH": "/usr/bin"})
 
@@ -18,9 +19,9 @@ def test_use_version_linux(mock_home, mock_os_arch, monkeypatch):
     assert not in_path
     assert config.get_active_version() == "1.0"
 
-    shim = mock_home / ".istioswitch" / "bin" / "istioctl"
-    assert shim.exists()
-    assert "exec" in shim.read_text()
+    link_path = mock_home / ".istioswitch" / "bin" / "istioctl"
+    assert link_path.exists()
+    assert link_path.is_symlink() or link_path.is_file()
 
 
 def test_use_version_windows(mock_home, mock_os_arch, monkeypatch):
@@ -28,7 +29,8 @@ def test_use_version_windows(mock_home, mock_os_arch, monkeypatch):
 
     ver_dir = mock_home / ".istioswitch" / "versions" / "1.0"
     ver_dir.mkdir(parents=True, exist_ok=True)
-    (ver_dir / "istioctl.exe").touch()
+    target_bin = ver_dir / "istioctl.exe"
+    target_bin.touch()
 
     bin_dir_path = mock_home / ".istioswitch" / "bin"
     monkeypatch.setattr(os, "environ", {"PATH": str(bin_dir_path)})
@@ -36,8 +38,14 @@ def test_use_version_windows(mock_home, mock_os_arch, monkeypatch):
     in_path, bin_dir = switcher.use_version("1.0")
 
     assert in_path
-    assert (bin_dir_path / "istioctl.bat").exists()
-    assert (bin_dir_path / "istioctl.ps1").exists()
+
+    link_path = bin_dir_path / "istioctl.exe"
+    assert link_path.exists()
+    assert link_path.is_symlink() or link_path.is_file()
+
+    # ensure legacy shims don't exist
+    assert not (bin_dir_path / "istioctl.bat").exists()
+    assert not (bin_dir_path / "istioctl.ps1").exists()
 
 
 def test_use_not_installed(mock_home, mock_os_arch):
