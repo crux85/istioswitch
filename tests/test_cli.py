@@ -143,7 +143,9 @@ def test_install_command_error(runner, monkeypatch):
 
 def test_detect_command(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.detector.detect_istio_version", lambda x: "1.0")
-    monkeypatch.setattr("istioswitch.detector.get_current_context", lambda: "my-cluster")
+    monkeypatch.setattr(
+        "istioswitch.detector.get_current_context", lambda: "my-cluster"
+    )
 
     result = runner.invoke(cli.cli, ["detect"])
     assert result.exit_code == 0
@@ -154,8 +156,10 @@ def test_detect_command(runner, monkeypatch):
 
 
 def test_detect_command_error(runner, monkeypatch):
-    monkeypatch.setattr("istioswitch.detector.get_current_context", lambda: "my-cluster")
-    
+    monkeypatch.setattr(
+        "istioswitch.detector.get_current_context", lambda: "my-cluster"
+    )
+
     def mock_detect(*args):
         raise RuntimeError("Detect error")
 
@@ -166,7 +170,9 @@ def test_detect_command_error(runner, monkeypatch):
 
 def test_auto_switch(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.detector.detect_istio_version", lambda: "1.0")
-    monkeypatch.setattr("istioswitch.detector.get_current_context", lambda: "my-cluster")
+    monkeypatch.setattr(
+        "istioswitch.detector.get_current_context", lambda: "my-cluster"
+    )
     monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
     monkeypatch.setattr(
         "istioswitch.switcher.use_version", lambda x: (True, "/fake/bin")

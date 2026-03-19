@@ -8,6 +8,7 @@ def test_get_current_context_success(monkeypatch):
         class MockResult:
             returncode = 0
             stdout = "my-cluster-context\n"
+
         return MockResult()
 
     monkeypatch.setattr(subprocess, "run", mock_run)
