@@ -44,18 +44,19 @@ def test_current_command_active(runner, monkeypatch):
     assert "Active version: 1.0" in result.output
 
 
-def test_use_command(runner, monkeypatch):
+def test_version_switch_command(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
     monkeypatch.setattr(
         "istioswitch.switcher.use_version", lambda x: (True, "/fake/bin")
     )
 
-    result = runner.invoke(cli.cli, ["use", "1.0"])
+    # Calling CLI with just a version string should invoke the fallback logic
+    result = runner.invoke(cli.cli, ["1.0"])
     assert result.exit_code == 0
     assert "Switched to istioctl 1.0" in result.output
 
 
-def test_use_command_not_installed(runner, monkeypatch):
+def test_version_switch_not_installed(runner, monkeypatch):
     installed = False
 
     def mock_is_installed(v):
@@ -71,37 +72,37 @@ def test_use_command_not_installed(runner, monkeypatch):
         "istioswitch.switcher.use_version", lambda x: (True, "/fake/bin")
     )
 
-    result = runner.invoke(cli.cli, ["use", "1.0"])
+    result = runner.invoke(cli.cli, ["1.0"])
     assert result.exit_code == 0
     assert "installing" in result.output.lower()
     assert "Switched to istioctl 1.0" in result.output
 
 
-def test_use_command_not_in_path_win(runner, monkeypatch):
+def test_version_switch_not_in_path_win(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
     monkeypatch.setattr(
         "istioswitch.switcher.use_version", lambda x: (False, "/fake/bin")
     )
     monkeypatch.setattr("istioswitch.cli.get_os", lambda: "windows")
 
-    result = runner.invoke(cli.cli, ["use", "1.0"])
+    result = runner.invoke(cli.cli, ["1.0"])
     assert result.exit_code == 0
     assert "setx PATH" in result.output
 
 
-def test_use_command_not_in_path_linux(runner, monkeypatch):
+def test_version_switch_not_in_path_linux(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
     monkeypatch.setattr(
         "istioswitch.switcher.use_version", lambda x: (False, "/fake/bin")
     )
     monkeypatch.setattr("istioswitch.cli.get_os", lambda: "linux")
 
-    result = runner.invoke(cli.cli, ["use", "1.0"])
+    result = runner.invoke(cli.cli, ["1.0"])
     assert result.exit_code == 0
     assert "export PATH=" in result.output
 
 
-def test_use_command_error(runner, monkeypatch):
+def test_version_switch_error(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
 
     def mock_use(*args):
@@ -109,7 +110,7 @@ def test_use_command_error(runner, monkeypatch):
 
     monkeypatch.setattr("istioswitch.switcher.use_version", mock_use)
 
-    result = runner.invoke(cli.cli, ["use", "1.0"])
+    result = runner.invoke(cli.cli, ["1.0"])
     assert "Use error" in result.output
 
 
@@ -142,37 +143,40 @@ def test_install_command_error(runner, monkeypatch):
 
 def test_detect_command(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.detector.detect_istio_version", lambda x: "1.0")
-    monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
-    monkeypatch.setattr(
-        "istioswitch.switcher.use_version", lambda x: (True, "/fake/bin")
-    )
+    monkeypatch.setattr("istioswitch.detector.get_current_context", lambda: "my-cluster")
 
     result = runner.invoke(cli.cli, ["detect"])
     assert result.exit_code == 0
-    assert "Detected Istio version: 1.0" in result.output
-    assert "Switched to istioctl 1.0" in result.output
-
-
-def test_detect_command_not_installed(runner, monkeypatch):
-    monkeypatch.setattr("istioswitch.detector.detect_istio_version", lambda x: "1.0")
-    monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: False)
-    monkeypatch.setattr("istioswitch.installer.install_version", lambda x: None)
-    monkeypatch.setattr(
-        "istioswitch.switcher.use_version", lambda x: (True, "/fake/bin")
-    )
-
-    result = runner.invoke(cli.cli, ["detect"])
-    assert result.exit_code == 0
-    assert "istioctl 1.0 installed" in result.output
+    assert "Detected Istio version on my-cluster:" in result.output
+    assert "1.0" in result.output
+    # Assert it didn't try to switch
+    assert "Switched to istioctl" not in result.output
 
 
 def test_detect_command_error(runner, monkeypatch):
+    monkeypatch.setattr("istioswitch.detector.get_current_context", lambda: "my-cluster")
+    
     def mock_detect(*args):
         raise RuntimeError("Detect error")
 
     monkeypatch.setattr("istioswitch.detector.detect_istio_version", mock_detect)
     result = runner.invoke(cli.cli, ["detect"])
     assert "Detect error" in result.output
+
+
+def test_auto_switch(runner, monkeypatch):
+    monkeypatch.setattr("istioswitch.detector.detect_istio_version", lambda: "1.0")
+    monkeypatch.setattr("istioswitch.detector.get_current_context", lambda: "my-cluster")
+    monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
+    monkeypatch.setattr(
+        "istioswitch.switcher.use_version", lambda x: (True, "/fake/bin")
+    )
+
+    # Calling CLI without commands
+    result = runner.invoke(cli.cli, [])
+    assert result.exit_code == 0
+    assert "Detected Istio version on context my-cluster: 1.0" in result.output
+    assert "Switched to istioctl 1.0" in result.output
 
 
 def test_uninstall_command(runner, monkeypatch):
