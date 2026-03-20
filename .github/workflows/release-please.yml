@@ -21,6 +21,7 @@ jobs:
         with:
           release-type: python
           package-name: istioswitch
+          token: ${{ secrets.RELEASE_TOKEN }}
 
   build-and-publish:
     needs: release-please
