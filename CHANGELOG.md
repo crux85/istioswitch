@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/crux85/istioswitch/compare/v0.2.1...v0.3.0) (2026-03-20)
+
+
+### Features
+
+* add python 3.14 support ([#7](https://github.com/crux85/istioswitch/issues/7)) ([9e51793](https://github.com/crux85/istioswitch/commit/9e517935cd7eb49ca2301f42fd3b5d52cb14e97e))
+
 ## [0.2.1](https://github.com/crux85/istioswitch/compare/v0.2.0...v0.2.1) (2026-03-19)
 
 
