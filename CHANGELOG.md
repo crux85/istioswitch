@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/crux85/istioswitch/compare/v0.3.0...v0.3.1) (2026-03-20)
+
+
+### Bug Fixes
+
+* explicit workflow permissions for github token ([#9](https://github.com/crux85/istioswitch/issues/9)) ([6773a77](https://github.com/crux85/istioswitch/commit/6773a773384e11bc7ee6cfb78db0245126f5d849))
+
 ## [0.3.0](https://github.com/crux85/istioswitch/compare/v0.2.1...v0.3.0) (2026-03-20)
 
 
