@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/crux85/istioswitch/compare/v0.3.1...v0.3.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* use PAT for release-please to trigger CI workflows ([#11](https://github.com/crux85/istioswitch/issues/11)) ([aacfdd4](https://github.com/crux85/istioswitch/commit/aacfdd4dbae740620c5a19e5042bd6a02de745c3))
+
 ## [0.3.1](https://github.com/crux85/istioswitch/compare/v0.3.0...v0.3.1) (2026-03-20)
 
 
