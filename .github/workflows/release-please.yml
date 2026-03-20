@@ -70,3 +70,43 @@ jobs:
         with:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: dist/${{ matrix.asset_name }}
+
+  publish-pypi:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # Required for PyPI Trusted Publisher
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          
+      - name: Install build tool
+        run: pip install build
+        
+      - name: Build package
+        run: python -m build
+        
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.13.0
+
+  publish-winget:
+    needs: [release-please, build-and-publish]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Submit package to WinGet
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: crux85.istioswitch
+          version: ${{ needs.release-please.outputs.tag_name }}
+          installers-regex: '\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
