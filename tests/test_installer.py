@@ -8,6 +8,32 @@ from istioswitch import installer
 import httpx
 
 
+def test_get_installed_versions(mock_home, mock_os_arch):
+    mock_os_arch("linux", "amd64")
+    versions_dir = mock_home / ".istioswitch" / "versions"
+    
+    # Not created yet
+    assert installer.get_installed_versions() == []
+    
+    versions_dir.mkdir(parents=True)
+    
+    # Create fake installed versions
+    (versions_dir / "1.20.0").mkdir()
+    (versions_dir / "1.20.0" / "istioctl").touch()
+    
+    (versions_dir / "1.19.5").mkdir()
+    (versions_dir / "1.19.5" / "istioctl").touch()
+    
+    (versions_dir / "2.0.0").mkdir()
+    (versions_dir / "2.0.0" / "istioctl.exe").touch()  # Test windows naming
+    
+    # Create empty dir (should be ignored)
+    (versions_dir / "1.18.0").mkdir()
+
+    installed = installer.get_installed_versions()
+    # It should sort semantically: 2.0.0, 1.20.0, 1.19.5
+    assert installed == ["2.0.0", "1.20.0", "1.19.5"]
+
 def test_get_available_versions(monkeypatch):
     mock_get = MagicMock()
     mock_get.return_value.json.return_value = [

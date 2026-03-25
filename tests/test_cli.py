@@ -10,9 +10,8 @@ def runner():
 
 def test_list_command(runner, monkeypatch):
     monkeypatch.setattr(
-        "istioswitch.installer.get_available_versions", lambda x: ["1.0", "1.1"]
+        "istioswitch.installer.get_installed_versions", lambda: ["1.0", "1.1"]
     )
-    monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: False)
     monkeypatch.setattr("istioswitch.config.get_active_version", lambda: None)
 
     result = runner.invoke(cli.cli, ["list"])
@@ -23,11 +22,23 @@ def test_list_command(runner, monkeypatch):
 
 def test_list_command_error(runner, monkeypatch):
     def mock_get(*args, **kwargs):
-        raise RuntimeError("Fetch error")
+        raise RuntimeError("Local read error")
 
-    monkeypatch.setattr("istioswitch.installer.get_available_versions", mock_get)
+    monkeypatch.setattr("istioswitch.installer.get_installed_versions", mock_get)
     result = runner.invoke(cli.cli, ["list"])
-    assert "Fetch error" in result.output
+    assert "Local read error" in result.output
+    # Fixes coverage for line 96-99: list exception block returns nothing
+    assert result.exit_code == 0
+
+
+def test_cli_fallback_command(runner, monkeypatch):
+    # Fixes coverage for line 51-52: treating unknown command as a version string
+    monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: True)
+    monkeypatch.setattr("istioswitch.switcher.use_version", lambda x: (True, "/fake/bin"))
+    
+    result = runner.invoke(cli.cli, ["1.99.0"])
+    assert result.exit_code == 0
+    assert "Switched to istioctl 1.99.0" in result.output
 
 
 def test_current_command_none(runner, monkeypatch):
@@ -113,6 +124,52 @@ def test_version_switch_error(runner, monkeypatch):
     result = runner.invoke(cli.cli, ["1.0"])
     assert "Use error" in result.output
 
+
+def test_install_command_interactive(runner, monkeypatch):
+    # Mocking questionary.select().ask()
+    class MockQuestionary:
+        def __init__(self, answer):
+            self.answer = answer
+        def ask(self):
+            return self.answer
+
+    monkeypatch.setattr("istioswitch.installer.get_available_versions", lambda x: ["1.2.3", "1.2.2"])
+    
+    # Test valid selection
+    monkeypatch.setattr("questionary.select", lambda msg, choices: MockQuestionary("1.2.3"))
+    monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: False)
+    monkeypatch.setattr("istioswitch.installer.install_version", lambda x: None)
+    monkeypatch.setattr("istioswitch.switcher.use_version", lambda x: (True, "/fake/bin"))
+    
+    result = runner.invoke(cli.cli, ["install"])
+    assert result.exit_code == 0
+    assert "Switched to istioctl 1.2.3" in result.output
+
+def test_install_command_interactive_cancelled(runner, monkeypatch):
+    class MockQuestionary:
+        def ask(self):
+            return None
+
+    monkeypatch.setattr("istioswitch.installer.get_available_versions", lambda x: ["1.2.3"])
+    monkeypatch.setattr("questionary.select", lambda msg, choices: MockQuestionary())
+    
+    result = runner.invoke(cli.cli, ["install"])
+    assert result.exit_code == 0
+    assert "Installation cancelled" in result.output
+
+def test_install_command_interactive_no_versions(runner, monkeypatch):
+    monkeypatch.setattr("istioswitch.installer.get_available_versions", lambda x: [])
+    result = runner.invoke(cli.cli, ["install"])
+    assert result.exit_code == 0
+    assert "No versions found" in result.output
+
+def test_install_command_interactive_fetch_error(runner, monkeypatch):
+    def mock_get(*args, **kwargs):
+        raise RuntimeError("Fetch error")
+    monkeypatch.setattr("istioswitch.installer.get_available_versions", mock_get)
+    result = runner.invoke(cli.cli, ["install"])
+    assert result.exit_code == 0
+    assert "Error fetching versions" in result.output
 
 def test_install_command(runner, monkeypatch):
     monkeypatch.setattr("istioswitch.installer.is_installed", lambda x: False)
