@@ -1,4 +1,5 @@
 import click
+import questionary
 from rich.console import Console
 
 from istioswitch import installer, switcher, config, detector
@@ -65,41 +66,76 @@ class IstioSwitchCLI(click.Group):
         return use_version_cmd
 
 
-@click.group(cls=IstioSwitchCLI, invoke_without_command=True)
+@click.group(
+    cls=IstioSwitchCLI,
+    invoke_without_command=True,
+    epilog="\b\nExamples:\n  istioswitch          # Auto-detect version, install if missing, and switch\n  istioswitch 1.20.0   # Switch to specific version, install if missing",
+)
 @click.pass_context
 def cli(ctx):
-    """istioswitch - Switch between multiple versions of istioctl"""
+    """
+    istioswitch - Switch between multiple versions of istioctl.
+
+    If run without arguments, it will automatically detect the Istio version
+    from the current Kubernetes cluster, install it if missing, and switch to it.
+    """
     if ctx.invoked_subcommand is None:
         auto_switch()
 
 
 @cli.command()
 def list():
-    """List available istioctl versions."""
+    """List locally installed istioctl versions."""
     try:
-        with console.status("[cyan]Fetching available versions..."):
-            versions = installer.get_available_versions(20)
+        versions = installer.get_installed_versions()
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         return
 
+    if not versions:
+        console.print(
+            "[yellow]No versions of istioctl are currently installed locally.[/yellow]"
+        )
+        return
+
     active = config.get_active_version()
-    console.print("Available istioctl versions (last 20):")
+    console.print("Installed istioctl versions:")
     for v in versions:
         marker = "->" if v == active else "  "
-        cached = "*" if installer.is_installed(v) else " "
-        status = (
-            "[active]"
-            if v == active
-            else ("[cached]" if installer.is_installed(v) else "")
-        )
-        console.print(f"  {marker} {v:<8} {cached} {status}".strip())
+        status = "[active]" if v == active else ""
+        console.print(f"  {marker} {v:<8} {status}".strip())
 
 
 @cli.command()
-@click.argument("version")
+@click.argument("version", required=False)
 def install(version: str):
     """Install a specific version of istioctl without switching."""
+    if not version:
+        # Interactive mode
+        try:
+            with console.status("[cyan]Fetching available versions from GitHub..."):
+                versions = installer.get_available_versions(20)
+        except Exception as e:
+            console.print(f"[red]Error fetching versions:[/red] {e}")
+            return
+
+        if not versions:
+            console.print("[red]No versions found.[/red]")
+            return
+
+        version = questionary.select(
+            "Select an istioctl version to install and use:", choices=versions
+        ).ask()
+
+        if not version:
+            console.print("[yellow]Installation cancelled.[/yellow]")
+            return
+
+        # User requested interactive installation, so we also switch
+        switch_to_version(version)
+        return
+
+    # Non-interactive mode (without switching)
     if installer.is_installed(version):
         console.print(f"[yellow]Version {version} is already installed.[/yellow]")
         return
@@ -115,7 +151,7 @@ def install(version: str):
 @cli.command()
 @click.option("--context", "-c", help="Target kubeconfig context")
 def detect(context: str):
-    """Show the istioctl version from Kubernetes cluster without switching."""
+    """Show cluster's istioctl version without switching."""
     try:
         ctx_name = context if context else detector.get_current_context()
         with console.status(f"[cyan]Detecting Istio version on context {ctx_name}..."):

@@ -50,25 +50,13 @@ jobs:
         with:
           python-version: "3.13"
           
-      - name: Install dependencies (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Install dependencies
         run: |
           pip install -e .
           pip install pyinstaller
 
-      - name: Build binary with PyInstaller (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Build binary with PyInstaller
         run: pyinstaller --onefile --name istioswitch src/istioswitch/cli.py
-
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          pip install -e .
-          pip install "nuitka[onefile]" zstandard
-
-      - name: Build binary with Nuitka (Windows)
-        if: runner.os == 'Windows'
-        run: python -m nuitka --onefile --assume-yes-for-downloads --output-dir=dist --output-filename=istioswitch.exe src/istioswitch/cli.py
         
       - name: Rename artifact for release (Linux/macOS)
         if: runner.os != 'Windows'
@@ -110,16 +98,3 @@ jobs:
         
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@v1.13.0
-
-  publish-winget:
-    needs: [release-please, build-and-publish]
-    if: ${{ needs.release-please.outputs.release_created }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Submit package to WinGet
-        uses: vedantmgoyal2009/winget-releaser@v2
-        with:
-          identifier: crux85.istioswitch
-          version: ${{ needs.release-please.outputs.tag_name }}
-          installers-regex: '\.exe$'
-          token: ${{ secrets.WINGET_TOKEN }}
