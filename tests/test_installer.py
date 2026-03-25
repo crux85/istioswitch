@@ -30,9 +30,34 @@ def test_get_installed_versions(mock_home, mock_os_arch):
     # Create empty dir (should be ignored)
     (versions_dir / "1.18.0").mkdir()
 
+    # Create a dir that doesn't match semantic version regex to cover line 67
+    (versions_dir / "invalid-version").mkdir()
+    (versions_dir / "invalid-version" / "istioctl").touch()
+
     installed = installer.get_installed_versions()
-    # It should sort semantically: 2.0.0, 1.20.0, 1.19.5
-    assert installed == ["2.0.0", "1.20.0", "1.19.5"]
+    # It should sort semantically: 2.0.0, 1.20.0, 1.19.5, invalid-version (evaluates to 0,0,0)
+    assert installed == ["2.0.0", "1.20.0", "1.19.5", "invalid-version"]
+
+
+def test_get_http_client_no_proxy(monkeypatch):
+    monkeypatch.delenv("HTTP_PROXY", raising=False)
+    monkeypatch.delenv("http_proxy", raising=False)
+    monkeypatch.delenv("HTTPS_PROXY", raising=False)
+    monkeypatch.delenv("https_proxy", raising=False)
+    client = installer._get_http_client()
+    assert client is not None
+
+
+def test_get_http_client_with_proxy(monkeypatch):
+    monkeypatch.setenv("HTTP_PROXY", "http://myproxy:8080")
+    monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1, .internal")
+
+    # Call the private function
+    client = installer._get_http_client()
+
+    assert client is not None
+    # Just asserting it didn't crash; httpx internal proxy structure checking is complex,
+    # but this will cover the proxy configuration lines.
 
 
 def test_get_available_versions(monkeypatch):
