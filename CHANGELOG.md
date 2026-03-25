@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/crux85/istioswitch/compare/v0.3.2...v0.3.3) (2026-03-25)
+
+
+### Bug Fixes
+
+* **build:** use nuitka for windows to prevent defender false positives ([#13](https://github.com/crux85/istioswitch/issues/13)) ([01d5a3b](https://github.com/crux85/istioswitch/commit/01d5a3b1ca720d8098dab6999b82687f3f9127b0))
+
 ## [0.3.2](https://github.com/crux85/istioswitch/compare/v0.3.1...v0.3.2) (2026-03-20)
 
 
