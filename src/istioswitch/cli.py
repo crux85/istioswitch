@@ -75,8 +75,8 @@ class IstioSwitchCLI(click.Group):
 def cli(ctx):
     """
     istioswitch - Switch between multiple versions of istioctl.
-    
-    If run without arguments, it will automatically detect the Istio version 
+
+    If run without arguments, it will automatically detect the Istio version
     from the current Kubernetes cluster, install it if missing, and switch to it.
     """
     if ctx.invoked_subcommand is None:
@@ -93,7 +93,9 @@ def list():
         return
 
     if not versions:
-        console.print("[yellow]No versions of istioctl are currently installed locally.[/yellow]")
+        console.print(
+            "[yellow]No versions of istioctl are currently installed locally.[/yellow]"
+        )
         return
 
     active = config.get_active_version()
@@ -116,20 +118,19 @@ def install(version: str):
         except Exception as e:
             console.print(f"[red]Error fetching versions:[/red] {e}")
             return
-            
+
         if not versions:
             console.print("[red]No versions found.[/red]")
             return
 
         version = questionary.select(
-            "Select an istioctl version to install and use:",
-            choices=versions
+            "Select an istioctl version to install and use:", choices=versions
         ).ask()
 
         if not version:
             console.print("[yellow]Installation cancelled.[/yellow]")
             return
-            
+
         # User requested interactive installation, so we also switch
         switch_to_version(version)
         return

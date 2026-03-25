@@ -46,23 +46,29 @@ def get_versions_dir() -> Path:
 
 def get_installed_versions() -> List[str]:
     import re
+
     versions_dir = get_versions_dir()
     if not versions_dir.exists():
         return []
-        
+
     versions = []
     for item in versions_dir.iterdir():
-        if item.is_dir() and (item / "istioctl").exists() or (item / "istioctl.exe").exists():
+        if (
+            item.is_dir()
+            and (item / "istioctl").exists()
+            or (item / "istioctl.exe").exists()
+        ):
             versions.append(item.name)
-            
+
     def version_key(v):
-        match = re.match(r'^v?(\d+)\.(\d+)\.(\d+)', v)
+        match = re.match(r"^v?(\d+)\.(\d+)\.(\d+)", v)
         if match:
             return tuple(int(x) for x in match.groups())
         return (0, 0, 0)
-        
+
     versions.sort(key=version_key, reverse=True)
     return versions
+
 
 def is_installed(version: str) -> bool:
     exe_name = "istioctl.exe" if get_os() == "windows" else "istioctl"
@@ -79,6 +85,7 @@ def get_available_versions(limit: int = 20) -> List[str]:
         raise RuntimeError(f"Network error fetching releases: {e}")
 
     import re
+
     versions = []
     for rel in response.json():
         if rel.get("prerelease") or rel.get("draft"):
@@ -86,13 +93,13 @@ def get_available_versions(limit: int = 20) -> List[str]:
         tag = rel["tag_name"]
         if tag:
             versions.append(tag)
-            
+
     def version_key(v):
-        match = re.match(r'^v?(\d+)\.(\d+)\.(\d+)', v)
+        match = re.match(r"^v?(\d+)\.(\d+)\.(\d+)", v)
         if match:
             return tuple(int(x) for x in match.groups())
         return (0, 0, 0)
-        
+
     versions.sort(key=version_key, reverse=True)
     return versions[:limit]
 
