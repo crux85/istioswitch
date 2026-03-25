@@ -50,13 +50,25 @@ jobs:
         with:
           python-version: "3.13"
           
-      - name: Install dependencies
+      - name: Install dependencies (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           pip install -e .
           pip install pyinstaller
 
-      - name: Build binary with PyInstaller
+      - name: Build binary with PyInstaller (Linux/macOS)
+        if: runner.os != 'Windows'
         run: pyinstaller --onefile --name istioswitch src/istioswitch/cli.py
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pip install -e .
+          pip install "nuitka[onefile]" zstandard
+
+      - name: Build binary with Nuitka (Windows)
+        if: runner.os == 'Windows'
+        run: python -m nuitka --onefile --assume-yes-for-downloads --output-dir=dist --output-filename=istioswitch.exe src/istioswitch/cli.py
         
       - name: Rename artifact for release (Linux/macOS)
         if: runner.os != 'Windows'
