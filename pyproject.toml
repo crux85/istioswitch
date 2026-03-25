@@ -12,7 +12,9 @@ license = {text = "MIT License"}
 dependencies = [
     "click>=8.0.0",
     "httpx>=0.24.0",
-    "rich>=13.0.0"
+    "rich>=13.0.0",
+    "Pygments>=2.19.3",
+    "questionary>=2.0.0"
 ]
 
 [project.optional-dependencies]
@@ -29,11 +31,11 @@ dev = [
 istioswitch = "istioswitch.cli:cli"
 
 [tool.pytest.ini_options]
-addopts = "--cov=src/istioswitch --cov-report=term-missing --cov-report=html --cov-fail-under=80"
+addopts = "--cov=istioswitch --cov-report=term-missing --cov-report=html --cov-fail-under=80"
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["src/istioswitch"]
+source = ["istioswitch"]
 branch = true
 
 [tool.coverage.report]
